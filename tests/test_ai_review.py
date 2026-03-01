@@ -112,9 +112,8 @@ class TestRunAiReview(TestCase):
         mock_client = MagicMock()
         mock_response = MagicMock()
         mock_response.choices = [MagicMock()]
-        mock_response.choices[0].message.content = (
-            "[SUMMARY]\nGreat server.\n[Task Clarity]\nClear.\n"
-        )
+        ai_reply = "[SUMMARY]\nGreat server.\n[Task Clarity]\nClear.\n"
+        mock_response.choices[0].message.content = ai_reply
         mock_response.model = "gpt-4o-mini-2025-07-18"
         mock_client.chat.completions.create.return_value = mock_response
 
