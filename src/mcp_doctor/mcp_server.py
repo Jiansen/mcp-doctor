@@ -9,14 +9,21 @@ except ImportError:
 
 if FastMCP is not None:
     _INSTRUCTIONS = """\
-TRUST MODEL: mcp-doctor is read-only. It only reads files from the local \
-filesystem. No network calls, no LLM, no API keys, no data sent anywhere.
+TRUST MODEL: In rule-based mode (default), mcp-doctor is fully offline and \
+read-only — it only reads files from the local filesystem. No network calls, \
+no LLM, no API keys, no data sent anywhere.
+
+In AI mode (mode="ai"), mcp-doctor sends a summary of the server metadata to \
+an OpenAI-compatible API for qualitative review. This requires OPENAI_API_KEY \
+to be set. No source code is sent — only metadata, tool definitions, and a \
+README preview.
 
 WORKFLOW:
-1. Use check_server(path) to evaluate any MCP server repo
-2. Review the 6 dimension scores (A/B/C/D)
-3. Focus on lowest-scoring dimensions first
-4. Follow the recommendations to improve the server
+1. Use check_server(path) for rule-based evaluation (default, deterministic)
+2. Use check_server(path, mode="ai") for AI-enhanced qualitative review
+3. Review the 6 dimension scores (A/B/C/D)
+4. Focus on lowest-scoring dimensions first
+5. Follow the recommendations to improve the server
 
 If check_server fails, verify the path points to a valid directory.
 
@@ -40,7 +47,12 @@ FEEDBACK: Report issues at https://github.com/Jiansen/mcp-doctor/issues
             "idempotentHint": True,
         },
     )
-    def check_server(path: str, format: str = "json") -> dict:
+    def check_server(
+        path: str,
+        format: str = "json",
+        mode: str = "rule",
+        model: str | None = None,
+    ) -> dict:
         """Run contract quality checks on an MCP server at the given path.
 
         Use this to evaluate any MCP server's readiness for agents,
@@ -50,10 +62,17 @@ FEEDBACK: Report issues at https://github.com/Jiansen/mcp-doctor/issues
             path: Absolute path to the MCP server repository directory.
             format: Output format — "json" for structured data (default),
                     "markdown" for human-readable report.
+            mode: "rule" for deterministic rule-based evaluation (default),
+                  "ai" for LLM-enhanced qualitative review (requires
+                  OPENAI_API_KEY environment variable).
+            model: LLM model name for AI mode. Defaults to
+                   $MCP_DOCTOR_MODEL env var or "gpt-4o-mini".
 
         Returns a structured report with:
+        - evaluation: {mode, model_name, model_version} (if AI mode)
         - overall_grade: A/B/C/D
-        - dimensions: list of 6 check results with grade, score, findings, recommendations
+        - dimensions: 6 check results with grade, score, findings
+        - ai_review: qualitative AI feedback (if AI mode)
         """
         import json as json_mod
 
@@ -64,17 +83,27 @@ FEEDBACK: Report issues at https://github.com/Jiansen/mcp-doctor/issues
         try:
             info = load_from_path(path)
         except FileNotFoundError as exc:
-            return {"error": str(exc), "hint": "Provide an absolute path to an MCP server repo."}
+            return {
+                "error": str(exc),
+                "hint": "Provide an absolute path to an MCP server repo.",
+            }
         except Exception as exc:
             return {"error": f"Failed to load server: {exc}"}
 
         results = run_all_checks(info)
         grade = overall_grade(results)
 
-        if format == "markdown":
-            return {"report": format_markdown(info, results, grade)}
+        ai_review = None
+        if mode == "ai":
+            from mcp_doctor.checks.ai_review import run_ai_review
 
-        return json_mod.loads(format_json(info, results, grade))
+            ai_review = run_ai_review(info, results, model=model)
+
+        if format == "markdown":
+            return {"report": format_markdown(info, results, grade, ai_review=ai_review)}
+
+        raw = format_json(info, results, grade, ai_review=ai_review)
+        return json_mod.loads(raw)
 
     @mcp.tool(
         annotations={

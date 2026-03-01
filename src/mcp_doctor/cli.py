@@ -25,17 +25,28 @@ def main(argv: list[str] | None = None) -> None:
         default="terminal",
         help="Output format (default: terminal)",
     )
+    check_p.add_argument(
+        "--mode",
+        choices=["rule", "ai"],
+        default="rule",
+        help="Evaluation mode: rule (deterministic, default) or ai (LLM-enhanced)",
+    )
+    check_p.add_argument(
+        "--model",
+        default=None,
+        help="LLM model name for AI mode (default: $MCP_DOCTOR_MODEL or gpt-4o-mini)",
+    )
 
     args = parser.parse_args(argv)
 
     if args.command == "check":
-        _run_check(args.path, args.format)
+        _run_check(args.path, args.format, args.mode, args.model)
     else:
         parser.print_help()
         sys.exit(1)
 
 
-def _run_check(path: str, fmt: str) -> None:
+def _run_check(path: str, fmt: str, mode: str = "rule", model: str | None = None) -> None:
     from mcp_doctor.checks import overall_grade, run_all_checks
     from mcp_doctor.loader import load_from_path
     from mcp_doctor.report import format_json, format_markdown, format_terminal
@@ -49,10 +60,18 @@ def _run_check(path: str, fmt: str) -> None:
     results = run_all_checks(info)
     grade = overall_grade(results)
 
+    ai_review = None
+    if mode == "ai":
+        from mcp_doctor.checks.ai_review import run_ai_review
+
+        ai_review = run_ai_review(info, results, model=model)
+        if ai_review.error:
+            print(f"AI review warning: {ai_review.error}", file=sys.stderr)
+
     formatters = {
         "terminal": format_terminal,
         "json": format_json,
         "markdown": format_markdown,
     }
-    output = formatters[fmt](info, results, grade)
+    output = formatters[fmt](info, results, grade, ai_review=ai_review)
     print(output)

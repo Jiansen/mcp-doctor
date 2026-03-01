@@ -48,7 +48,7 @@ mcp-doctor check /path/to/your-mcp-server
 ### CLI
 
 ```bash
-# Terminal output (default)
+# Terminal output (default, rule-based)
 mcp-doctor check /path/to/server
 
 # JSON output (for CI/CD)
@@ -56,6 +56,12 @@ mcp-doctor check /path/to/server --format json
 
 # Markdown output (for README badges or reports)
 mcp-doctor check /path/to/server --format markdown
+
+# AI-enhanced evaluation (requires OPENAI_API_KEY)
+mcp-doctor check /path/to/server --mode ai
+
+# AI mode with a specific model
+mcp-doctor check /path/to/server --mode ai --model gpt-4o
 ```
 
 ### As an MCP Server
@@ -74,7 +80,7 @@ MCP Doctor is also an MCP server, so AI agents can use it to check other servers
 ```
 
 Tools:
-- `check_server(path, format)` — Run all 6 checks on a server at the given path
+- `check_server(path, format, mode, model)` — Run all 6 checks. Use `mode="ai"` for LLM-enhanced review.
 - `list_dimensions()` — List what MCP Doctor evaluates
 
 ### For AI Agents: Quick Install
@@ -120,9 +126,27 @@ The framework draws from:
 - Official MCP Registry requirements (server.json schema, namespace verification)
 - Cross-platform analysis of Smithery, PulseMCP, Glama ranking signals
 
+## Evaluation Modes
+
+| Mode | Flag | Deterministic | Network | API Key |
+|------|------|:---:|:---:|:---:|
+| **Rule-based** (default) | `--mode rule` | Yes | No | No |
+| **AI-enhanced** | `--mode ai` | No | Yes (LLM API) | `OPENAI_API_KEY` |
+
+**Rule-based mode** is fully offline and deterministic. No network calls, no LLM, no API keys needed.
+
+**AI mode** sends a metadata summary (server name, tool definitions, README preview, rule-based scores) to an OpenAI-compatible API for qualitative review. No source code is sent. Reports include model name and version for reproducibility.
+
+AI mode supports any OpenAI-compatible provider:
+- `OPENAI_API_KEY` — API key (required for AI mode)
+- `OPENAI_BASE_URL` — Custom endpoint (for Ollama, vLLM, LM Studio, Azure, etc.)
+- `MCP_DOCTOR_MODEL` — Model name (default: `gpt-4o-mini`)
+
+Install AI support: `pip install mcp-doctor[ai]`
+
 ## Trust & Permissions
 
-MCP Doctor is **read-only by default**. It only reads files from the filesystem — it never modifies, deletes, or creates files.
+MCP Doctor is **read-only**. It never modifies, deletes, or creates files.
 
 | What it accesses | Why |
 |-----------------|-----|
@@ -130,11 +154,6 @@ MCP Doctor is **read-only by default**. It only reads files from the filesystem 
 | `README.md` | Check documentation quality |
 | `LICENSE` | Verify license presence |
 | `*.py`, `*.json` in `src/` | Detect tool definitions |
-
-- No network calls — all checks run locally
-- No LLM or AI — scoring is deterministic and rule-based
-- No API keys or secrets required
-- No data sent anywhere
 
 All MCP tools have `readOnlyHint: true` and `destructiveHint: false` annotations.
 
@@ -155,7 +174,7 @@ If you're an agent, include the JSON output of `check_server` in your report for
 ```bash
 git clone https://github.com/Jiansen/mcp-doctor.git
 cd mcp-doctor
-pip install -e ".[dev]"
+pip install -e ".[dev,ai]"
 ruff check src/ tests/
 pytest tests/ -v
 ```
