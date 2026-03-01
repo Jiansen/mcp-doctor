@@ -28,7 +28,7 @@ Issues = "https://github.com/Jiansen/mcp-doctor/issues"
 [project.optional-dependencies]
 mcp = ["fastmcp>=2.0.0"]
 ai = ["openai>=1.0.0"]
-dev = ["pytest", "ruff"]
+dev = ["pytest", "ruff>=0.15.0,<0.16"]
 all = ["fastmcp>=2.0.0", "openai>=1.0.0"]
 
 [project.scripts]
