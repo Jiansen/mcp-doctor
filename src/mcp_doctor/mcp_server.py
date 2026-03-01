@@ -8,8 +8,24 @@ except ImportError:
     FastMCP = None  # type: ignore[assignment, misc]
 
 if FastMCP is not None:
+    _INSTRUCTIONS = """\
+TRUST MODEL: mcp-doctor is read-only. It only reads files from the local \
+filesystem. No network calls, no LLM, no API keys, no data sent anywhere.
+
+WORKFLOW:
+1. Use check_server(path) to evaluate any MCP server repo
+2. Review the 6 dimension scores (A/B/C/D)
+3. Focus on lowest-scoring dimensions first
+4. Follow the recommendations to improve the server
+
+If check_server fails, verify the path points to a valid directory.
+
+FEEDBACK: Report issues at https://github.com/Jiansen/mcp-doctor/issues
+"""
+
     mcp = FastMCP(
         "mcp-doctor",
+        instructions=_INSTRUCTIONS,
         description=(
             "Check the contract quality of any MCP server. "
             "Use this when you want to evaluate whether an MCP server "
@@ -45,7 +61,13 @@ if FastMCP is not None:
         from mcp_doctor.loader import load_from_path
         from mcp_doctor.report import format_json, format_markdown
 
-        info = load_from_path(path)
+        try:
+            info = load_from_path(path)
+        except FileNotFoundError as exc:
+            return {"error": str(exc), "hint": "Provide an absolute path to an MCP server repo."}
+        except Exception as exc:
+            return {"error": f"Failed to load server: {exc}"}
+
         results = run_all_checks(info)
         grade = overall_grade(results)
 

@@ -60,7 +60,7 @@ def _load_server_json(root: Path, info: ServerInfo) -> None:
         return
     try:
         data = json.loads(sj.read_text(encoding="utf-8"))
-    except (json.JSONDecodeError, OSError):
+    except (json.JSONDecodeError, OSError, UnicodeDecodeError):
         return
     info.has_server_json = True
     info.server_json = data
@@ -83,7 +83,7 @@ def _load_readme(root: Path, info: ServerInfo) -> None:
             info.has_readme = True
             try:
                 info.readme_text = p.read_text(encoding="utf-8")
-            except OSError:
+            except (OSError, UnicodeDecodeError):
                 pass
             return
 
@@ -111,7 +111,7 @@ def _load_tools_from_source(root: Path, info: ServerInfo) -> None:
     for py_file in root.rglob("*.py"):
         try:
             src = py_file.read_text(encoding="utf-8")
-        except OSError:
+        except (OSError, UnicodeDecodeError):
             continue
         if "@" not in src or "tool" not in src:
             continue
@@ -167,7 +167,7 @@ def _load_tools_from_json_descriptors(root: Path, info: ServerInfo, seen: set[st
             continue
         try:
             data = json.loads(json_file.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError):
             continue
         if not isinstance(data, dict) or "name" not in data:
             continue

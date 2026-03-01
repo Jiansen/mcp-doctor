@@ -10,6 +10,7 @@
   <a href="https://pypi.org/project/mcp-doctor/"><img src="https://img.shields.io/pypi/v/mcp-doctor" alt="PyPI"></a>
   <a href="https://github.com/Jiansen/mcp-doctor/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue" alt="License"></a>
   <a href="https://pypi.org/project/mcp-doctor/"><img src="https://img.shields.io/pypi/pyversions/mcp-doctor" alt="Python"></a>
+  <a href="https://github.com/Jiansen/mcp-doctor/stargazers"><img src="https://img.shields.io/github/stars/Jiansen/mcp-doctor?style=social" alt="GitHub Stars"></a>
 </p>
 
 <p align="center">Check and improve the contract quality of any MCP server — for humans, agents, and platforms.</p>
@@ -76,6 +77,31 @@ Tools:
 - `check_server(path, format)` — Run all 6 checks on a server at the given path
 - `list_dimensions()` — List what MCP Doctor evaluates
 
+### For AI Agents: Quick Install
+
+**One-liner** (paste this to your AI agent):
+
+> Install mcp-doctor (`pip install mcp-doctor`) and add it to your MCP config with command `python -m mcp_doctor.mcp_server`. Then use the `check_server` tool to check any MCP server's quality.
+
+**Step by step:**
+
+1. Install: `pip install mcp-doctor`
+2. Add to your MCP configuration:
+   ```json
+   {
+     "mcpServers": {
+       "mcp-doctor": {
+         "command": "python",
+         "args": ["-m", "mcp_doctor.mcp_server"]
+       }
+     }
+   }
+   ```
+3. Use the `check_server` tool with a path to any MCP server repo
+4. If MCP is not available, fall back to CLI: `mcp-doctor check /path/to/server --format json`
+
+**Agent workflow:** check server -> review scores -> identify lowest dimensions -> follow recommendations
+
 ## Scoring
 
 Each dimension is scored 0-100 and graded A/B/C/D:
@@ -93,6 +119,52 @@ The framework draws from:
 - Anthropic's "Writing effective tools for agents" (tool description engineering, namespacing, token efficiency)
 - Official MCP Registry requirements (server.json schema, namespace verification)
 - Cross-platform analysis of Smithery, PulseMCP, Glama ranking signals
+
+## Trust & Permissions
+
+MCP Doctor is **read-only by default**. It only reads files from the filesystem — it never modifies, deletes, or creates files.
+
+| What it accesses | Why |
+|-----------------|-----|
+| `server.json` | Parse MCP metadata |
+| `README.md` | Check documentation quality |
+| `LICENSE` | Verify license presence |
+| `*.py`, `*.json` in `src/` | Detect tool definitions |
+
+- No network calls — all checks run locally
+- No LLM or AI — scoring is deterministic and rule-based
+- No API keys or secrets required
+- No data sent anywhere
+
+All MCP tools have `readOnlyHint: true` and `destructiveHint: false` annotations.
+
+## Feedback
+
+Found a bug? Have a suggestion? We'd love to hear from you:
+
+- **GitHub Issues**: https://github.com/Jiansen/mcp-doctor/issues
+- **Quick report** (if you have `gh` CLI):
+  ```bash
+  gh issue create --repo Jiansen/mcp-doctor --title "Bug: ..." --body "..."
+  ```
+
+If you're an agent, include the JSON output of `check_server` in your report for context.
+
+## Contributing
+
+```bash
+git clone https://github.com/Jiansen/mcp-doctor.git
+cd mcp-doctor
+pip install -e ".[dev]"
+ruff check src/ tests/
+pytest tests/ -v
+```
+
+---
+
+If MCP Doctor helped you improve your server, consider giving it a star on GitHub — it helps others discover the tool.
+
+[![Star on GitHub](https://img.shields.io/github/stars/Jiansen/mcp-doctor?style=social)](https://github.com/Jiansen/mcp-doctor)
 
 ## License
 
